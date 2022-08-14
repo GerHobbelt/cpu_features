@@ -412,7 +412,11 @@ static Node* CreateTree(void) {
   return root;
 }
 
-int main(int argc, char** argv) {
+#if defined(BUILD_MONOLITHIC)
+#define main  cpuf_list_features_main
+#endif
+
+int main(int argc, const char** argv) {
   BA_Align();
   const Node* const root = CreateTree();
   bool outputJson = false;

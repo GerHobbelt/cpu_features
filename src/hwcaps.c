@@ -100,9 +100,11 @@ static uint32_t GetElfHwcapFromGetauxval(uint32_t hwcap_type) {
   dlclose(libc_handle);
   return ret;
 }
-#else
+#elif !defined(_WIN32)
 #error "This platform does not provide hardware capabilities."
 #endif
+
+#if !defined(_WIN32)
 
 // Implementation of GetHardwareCapabilities for OS that provide
 // GetElfHwcapFromGetauxval().
@@ -165,5 +167,7 @@ const char *CpuFeatures_GetPlatformPointer(void) {
 const char *CpuFeatures_GetBasePlatformPointer(void) {
   return (const char *)GetHardwareCapabilitiesFor(AT_BASE_PLATFORM);
 }
+
+#endif
 
 #endif  // CPU_FEATURES_TEST

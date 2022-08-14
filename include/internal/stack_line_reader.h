@@ -24,6 +24,10 @@
 
 CPU_FEATURES_START_CPP_NAMESPACE
 
+#ifndef STACK_LINE_READER_BUFFER_SIZE
+#define STACK_LINE_READER_BUFFER_SIZE 4096
+#endif
+
 typedef struct {
   char buffer[STACK_LINE_READER_BUFFER_SIZE];
   StringView view;

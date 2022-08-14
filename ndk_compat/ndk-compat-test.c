@@ -2,6 +2,10 @@
 
 #include "cpu-features.h"
 
+#if defined(BUILD_MONOLITHIC)
+#define main  cpuf_ndk_compat_test_main
+#endif
+
 int main() {
   printf("android_getCpuFamily()=%d\n", android_getCpuFamily());
   printf("android_getCpuFeatures()=0x%08llx\n", android_getCpuFeatures());
