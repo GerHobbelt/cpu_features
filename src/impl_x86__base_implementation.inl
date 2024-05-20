@@ -474,6 +474,7 @@ X86Microarchitecture GetX86Microarchitecture(const X86Info* info) {
       case CPUID(0x06, 0x9C):
         // https://en.wikichip.org/wiki/intel/microarchitectures/tremont
         return INTEL_ATOM_TMT;
+      case CPUID(0x06, 0x0E):
       case CPUID(0x06, 0x0F):
       case CPUID(0x06, 0x16):
         // https://en.wikipedia.org/wiki/Intel_Core_(microarchitecture)
@@ -514,9 +515,14 @@ X86Microarchitecture GetX86Microarchitecture(const X86Info* info) {
         // https://en.wikipedia.org/wiki/Broadwell_(microarchitecture)
         return INTEL_BDW;
       case CPUID(0x06, 0x4E):
-      case CPUID(0x06, 0x55):
       case CPUID(0x06, 0x5E):
         // https://en.wikipedia.org/wiki/Skylake_(microarchitecture)
+        return INTEL_SKL;
+      case CPUID(0x06, 0x55):
+        if (info->stepping >= 6 && info->stepping <= 7) {
+          // https://en.wikipedia.org/wiki/Cascade_Lake_(microprocessor)
+          return INTEL_CCL;
+        }
         return INTEL_SKL;
       case CPUID(0x06, 0x66):
         // https://en.wikipedia.org/wiki/Cannon_Lake_(microarchitecture)
@@ -705,6 +711,7 @@ X86Microarchitecture GetX86Microarchitecture(const X86Info* info) {
         // https://en.wikichip.org/wiki/amd/microarchitectures/excavator
         return AMD_EXCAVATOR;
       case CPUID(0x16, 0x00):
+      case CPUID(0x16, 0x26):
         return AMD_JAGUAR;
       case CPUID(0x16, 0x30):
         return AMD_PUMA;
@@ -737,6 +744,7 @@ X86Microarchitecture GetX86Microarchitecture(const X86Info* info) {
         // https://en.wikichip.org/wiki/amd/microarchitectures/zen_3
         return AMD_ZEN3;
       case CPUID(0x19, 0x10):
+      case CPUID(0x19, 0x61):
         // https://en.wikichip.org/wiki/amd/microarchitectures/zen_4
         return AMD_ZEN4;
       default:
@@ -1688,6 +1696,115 @@ static void ParseCacheInfo(const int max_cpuid_leaf, uint32_t leaf_id,
   if (info.size > 0) *old_info = info;
 }
 
+typedef struct {
+  int level;
+  int cache_id;
+  CacheType cache_type;
+} CacheLevelInfoLegacyAMD;
+
+static int GetWaysLegacyAMD(int cache_level, const uint32_t cache_id) {
+  // https://www.amd.com/system/files/TechDocs/25481.pdf page 23
+  // CPUID.8000_0005_ECX[23:16] L1 data cache associativity.
+  // CPUID.8000_0005_EDX[23:16] L1 instruction cache associativity.
+  if (cache_level == 1) {
+    return ExtractBitRange(cache_id, 23, 16);
+  }
+  // https://www.amd.com/system/files/TechDocs/25481.pdf page 24
+  // See Table 4: L2/L3 Cache and TLB Associativity Field Definition.
+  // CPUID.8000_0006_ECX[15:12] L2 cache associativity.
+  // CPUID.8000_0006_EDX[15:12] L3 cache associativity.
+  const int ways = ExtractBitRange(cache_id, 15, 12);
+  switch (ways) {
+    case 0x0:
+    case 0x1:
+    case 0x2:
+    case 0x4:
+      return ways;
+    case 0x6:
+      return 8;
+    case 0x8:
+      return 16;
+    case 0xA:
+      return 32;
+    case 0xB:
+      return 48;
+    case 0xC:
+      return 64;
+    case 0xD:
+      return 96;
+    case 0xE:
+      return 128;
+    case 0xF:
+      return 255;
+    default:
+      return -1;  // Reserved
+  }
+}
+
+static int GetCacheSizeLegacyAMD(int cache_level, const uint32_t cache_id) {
+  switch (cache_level) {
+    case 1:
+      // https://www.amd.com/system/files/TechDocs/25481.pdf page 23
+      // CPUID.8000_0005_ECX[31:24] L1 data cache size in KB.
+      // CPUID.8000_0005_EDX[31:24] L1 instruction cache size KB.
+      return ExtractBitRange(cache_id, 31, 24);
+    case 2:
+      // https://www.amd.com/system/files/TechDocs/25481.pdf page 25
+      // CPUID.8000_0006_ECX[31:16] L2 cache size in KB.
+      return ExtractBitRange(cache_id, 31, 16);
+    case 3:
+      // https://www.amd.com/system/files/TechDocs/25481.pdf page 25
+      // CPUID.8000_0006_EDX[31:18] L3 cache size.
+      // Specifies the L3 cache size is within the following range:
+      // (L3Size[31:18] * 512KB) <= L3 cache size < ((L3Size[31:18]+1) * 512KB).
+      return ExtractBitRange(cache_id, 31, 18) * 512;
+    default:
+      return 0;
+  }
+}
+
+#define LEGACY_AMD_MAX_CACHE_LEVEL 4
+
+// https://www.amd.com/system/files/TechDocs/25481.pdf
+// CPUID Fn8000_0005_E[A,B,C,D]X, Fn8000_0006_E[A,B,C,D]X - TLB and Cache info
+static void ParseCacheInfoLegacyAMD(const uint32_t max_ext, CacheInfo* info) {
+  const Leaf cache_tlb_leaf1 = SafeCpuIdEx(max_ext, 0x80000005, 0);
+  const Leaf cache_tlb_leaf2 = SafeCpuIdEx(max_ext, 0x80000006, 0);
+
+  const CacheLevelInfoLegacyAMD legacy_cache_info[LEGACY_AMD_MAX_CACHE_LEVEL] =
+      {(CacheLevelInfoLegacyAMD){.cache_id = cache_tlb_leaf1.ecx,
+                                 .cache_type = CPU_FEATURE_CACHE_DATA,
+                                 .level = 1},
+       (CacheLevelInfoLegacyAMD){.cache_id = cache_tlb_leaf1.edx,
+                                 .cache_type = CPU_FEATURE_CACHE_INSTRUCTION,
+                                 .level = 1},
+       (CacheLevelInfoLegacyAMD){.cache_id = cache_tlb_leaf2.ecx,
+                                 .cache_type = CPU_FEATURE_CACHE_UNIFIED,
+                                 .level = 2},
+       (CacheLevelInfoLegacyAMD){.cache_id = cache_tlb_leaf2.edx,
+                                 .cache_type = CPU_FEATURE_CACHE_UNIFIED,
+                                 .level = 3}};
+
+  const int KiB = 1024;
+  const int UNDEF = -1;
+  for (int i = 0; i < LEGACY_AMD_MAX_CACHE_LEVEL; ++i) {
+    const int level = legacy_cache_info[i].level;
+    const int cache_id = legacy_cache_info[i].cache_id;
+    const CacheType cache_type = legacy_cache_info[i].cache_type;
+    const int cache_size = GetCacheSizeLegacyAMD(level, cache_id);
+    if (cache_size == 0) break;
+    info->levels[i] =
+        (CacheLevelInfo){.level = level,
+                         .cache_type = cache_type,
+                         .cache_size = cache_size * KiB,
+                         .ways = GetWaysLegacyAMD(level, cache_id),
+                         .line_size = ExtractBitRange(cache_id, 7, 0),
+                         .tlb_entries = UNDEF,
+                         .partitioning = UNDEF};
+    ++info->size;
+  }
+}
+
 CacheInfo GetX86CacheInfo(void) {
   CacheInfo info = kEmptyCacheInfo;
   const Leaves leaves = ReadLeaves();
@@ -1703,6 +1820,8 @@ CacheInfo GetX86CacheInfo(void) {
     // https://www.amd.com/system/files/TechDocs/25481.pdf
     if (IsBitSet(leaves.leaf_80000001.ecx, 22)) {
       ParseCacheInfo(leaves.max_cpuid_leaf_ext, 0x8000001D, &info);
+    } else {
+      ParseCacheInfoLegacyAMD(leaves.max_cpuid_leaf_ext, &info);
     }
   }
   return info;
@@ -1799,6 +1918,7 @@ CacheInfo GetX86CacheInfo(void) {
   LINE(INTEL_HSW)                   \
   LINE(INTEL_BDW)                   \
   LINE(INTEL_SKL)                   \
+  LINE(INTEL_CCL)                   \
   LINE(INTEL_ATOM_GMT)              \
   LINE(INTEL_ATOM_GMT_PLUS)         \
   LINE(INTEL_ATOM_TMT)              \

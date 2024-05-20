@@ -219,6 +219,34 @@ TEST_F(CpuidX86Test, SkyLake) {
   EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::INTEL_SKL);
 }
 
+// http://users.atw.hu/instlatx64/GenuineIntel/GenuineIntel0050654_SkylakeXeon_CPUID8.txt
+TEST_F(CpuidX86Test, SkyLakeXeon) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x00000016, 0x756E6547, 0x6C65746E, 0x49656E69}},
+      {{0x00000001, 0}, Leaf{0x00050654, 0x00100800, 0x7FFEFBFF, 0xBFEBFBFF}}
+  });
+  const auto info = GetX86Info();
+  EXPECT_STREQ(info.vendor, CPU_FEATURES_VENDOR_GENUINE_INTEL);
+  EXPECT_EQ(info.family, 0x06);
+  EXPECT_EQ(info.model, 0x055);
+  EXPECT_EQ(info.stepping, 0x04);
+  EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::INTEL_SKL);
+}
+
+// http://users.atw.hu/instlatx64/GenuineIntel/GenuineIntel0050657_CascadeLakeXeon_CPUID.txt
+TEST_F(CpuidX86Test, CascadeLake) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x00000016, 0x756E6547, 0x6C65746E, 0x49656E69}},
+      {{0x00000001, 0}, Leaf{0x00050657, 0x00400800, 0x7FFEFBFF, 0xBFEBFBFF}}
+  });
+  const auto info = GetX86Info();
+  EXPECT_STREQ(info.vendor, CPU_FEATURES_VENDOR_GENUINE_INTEL);
+  EXPECT_EQ(info.family, 0x06);
+  EXPECT_EQ(info.model, 0x055);
+  EXPECT_EQ(info.stepping, 0x07);
+  EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::INTEL_CCL);
+}
+
 TEST_F(CpuidX86Test, Branding) {
   cpu().SetLeaves({
       {{0x00000000, 0}, Leaf{0x00000016, 0x756E6547, 0x6C65746E, 0x49656E69}},
@@ -251,7 +279,7 @@ TEST_F(CpuidX86Test, KabyLakeCache) {
   const auto info = GetX86CacheInfo();
   EXPECT_EQ(info.size, 4);
   EXPECT_EQ(info.levels[0].level, 1);
-  EXPECT_EQ(info.levels[0].cache_type, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
   EXPECT_EQ(info.levels[0].cache_size, 32 * KiB);
   EXPECT_EQ(info.levels[0].ways, 8);
   EXPECT_EQ(info.levels[0].line_size, 64);
@@ -259,7 +287,8 @@ TEST_F(CpuidX86Test, KabyLakeCache) {
   EXPECT_EQ(info.levels[0].partitioning, 1);
 
   EXPECT_EQ(info.levels[1].level, 1);
-  EXPECT_EQ(info.levels[1].cache_type, 2);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
   EXPECT_EQ(info.levels[1].cache_size, 32 * KiB);
   EXPECT_EQ(info.levels[1].ways, 8);
   EXPECT_EQ(info.levels[1].line_size, 64);
@@ -267,7 +296,7 @@ TEST_F(CpuidX86Test, KabyLakeCache) {
   EXPECT_EQ(info.levels[1].partitioning, 1);
 
   EXPECT_EQ(info.levels[2].level, 2);
-  EXPECT_EQ(info.levels[2].cache_type, 3);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[2].cache_size, 256 * KiB);
   EXPECT_EQ(info.levels[2].ways, 4);
   EXPECT_EQ(info.levels[2].line_size, 64);
@@ -275,7 +304,7 @@ TEST_F(CpuidX86Test, KabyLakeCache) {
   EXPECT_EQ(info.levels[2].partitioning, 1);
 
   EXPECT_EQ(info.levels[3].level, 3);
-  EXPECT_EQ(info.levels[3].cache_type, 3);
+  EXPECT_EQ(info.levels[3].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[3].cache_size, 6 * MiB);
   EXPECT_EQ(info.levels[3].ways, 12);
   EXPECT_EQ(info.levels[3].line_size, 64);
@@ -300,7 +329,7 @@ TEST_F(CpuidX86Test, HSWCache) {
   const auto info = GetX86CacheInfo();
   EXPECT_EQ(info.size, 4);
   EXPECT_EQ(info.levels[0].level, 1);
-  EXPECT_EQ(info.levels[0].cache_type, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
   EXPECT_EQ(info.levels[0].cache_size, 32 * KiB);
   EXPECT_EQ(info.levels[0].ways, 8);
   EXPECT_EQ(info.levels[0].line_size, 64);
@@ -308,7 +337,8 @@ TEST_F(CpuidX86Test, HSWCache) {
   EXPECT_EQ(info.levels[0].partitioning, 1);
 
   EXPECT_EQ(info.levels[1].level, 1);
-  EXPECT_EQ(info.levels[1].cache_type, 2);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
   EXPECT_EQ(info.levels[1].cache_size, 32 * KiB);
   EXPECT_EQ(info.levels[1].ways, 8);
   EXPECT_EQ(info.levels[1].line_size, 64);
@@ -316,7 +346,7 @@ TEST_F(CpuidX86Test, HSWCache) {
   EXPECT_EQ(info.levels[1].partitioning, 1);
 
   EXPECT_EQ(info.levels[2].level, 2);
-  EXPECT_EQ(info.levels[2].cache_type, 3);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[2].cache_size, 256 * KiB);
   EXPECT_EQ(info.levels[2].ways, 8);
   EXPECT_EQ(info.levels[2].line_size, 64);
@@ -324,7 +354,7 @@ TEST_F(CpuidX86Test, HSWCache) {
   EXPECT_EQ(info.levels[2].partitioning, 1);
 
   EXPECT_EQ(info.levels[3].level, 3);
-  EXPECT_EQ(info.levels[3].cache_type, 3);
+  EXPECT_EQ(info.levels[3].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[3].cache_size, 6 * MiB);
   EXPECT_EQ(info.levels[3].ways, 12);
   EXPECT_EQ(info.levels[3].line_size, 64);
@@ -484,7 +514,7 @@ TEST_F(CpuidX86Test, AMD_K15_PILEDRIVER_ABU_DHABI_CACHE_INFO) {
 
   EXPECT_EQ(info.size, 4);
   EXPECT_EQ(info.levels[0].level, 1);
-  EXPECT_EQ(info.levels[0].cache_type, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
   EXPECT_EQ(info.levels[0].cache_size, 16 * KiB);
   EXPECT_EQ(info.levels[0].ways, 4);
   EXPECT_EQ(info.levels[0].line_size, 64);
@@ -492,7 +522,8 @@ TEST_F(CpuidX86Test, AMD_K15_PILEDRIVER_ABU_DHABI_CACHE_INFO) {
   EXPECT_EQ(info.levels[0].partitioning, 1);
 
   EXPECT_EQ(info.levels[1].level, 1);
-  EXPECT_EQ(info.levels[1].cache_type, 2);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
   EXPECT_EQ(info.levels[1].cache_size, 64 * KiB);
   EXPECT_EQ(info.levels[1].ways, 2);
   EXPECT_EQ(info.levels[1].line_size, 64);
@@ -500,7 +531,7 @@ TEST_F(CpuidX86Test, AMD_K15_PILEDRIVER_ABU_DHABI_CACHE_INFO) {
   EXPECT_EQ(info.levels[1].partitioning, 1);
 
   EXPECT_EQ(info.levels[2].level, 2);
-  EXPECT_EQ(info.levels[2].cache_type, 3);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[2].cache_size, 2 * MiB);
   EXPECT_EQ(info.levels[2].ways, 16);
   EXPECT_EQ(info.levels[2].line_size, 64);
@@ -508,7 +539,7 @@ TEST_F(CpuidX86Test, AMD_K15_PILEDRIVER_ABU_DHABI_CACHE_INFO) {
   EXPECT_EQ(info.levels[2].partitioning, 1);
 
   EXPECT_EQ(info.levels[3].level, 3);
-  EXPECT_EQ(info.levels[3].cache_type, 3);
+  EXPECT_EQ(info.levels[3].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[3].cache_size, 6 * MiB);
   EXPECT_EQ(info.levels[3].ways, 48);
   EXPECT_EQ(info.levels[3].line_size, 64);
@@ -652,6 +683,28 @@ TEST_F(CpuidX86Test, AMD_K16_PUMA_BEEMA) {
   EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::AMD_PUMA);
 }
 
+// https://github.com/InstLatx64/InstLatx64/blob/master/AuthenticAMD/AuthenticAMD0720F61_K16_Cato_CPUID.txt
+TEST_F(CpuidX86Test, AMD_K16_CATO) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x0000000D, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x00000001, 0}, Leaf{0x00720F61, 0x00080800, 0x3ED8220B, 0x178BFBFF}},
+      {{0x00000007, 0}, Leaf{0x00000000, 0x00000008, 0x00000000, 0x00000000}},
+      {{0x80000000, 0}, Leaf{0x8000001E, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000001, 0}, Leaf{0x00720F61, 0x00000000, 0x154837FF, 0x2FD3FBFF}},
+      {{0x80000002, 0}, Leaf{0x20444D41, 0x392D3941, 0x20303238, 0x636F7250}},
+      {{0x80000003, 0}, Leaf{0x6F737365, 0x00000072, 0x00000000, 0x00000000}},
+      {{0x80000004, 0}, Leaf{0x00000000, 0x00000000, 0x00000000, 0x00000000}},
+  });
+  const auto info = GetX86Info();
+
+  EXPECT_STREQ(info.vendor, CPU_FEATURES_VENDOR_AUTHENTIC_AMD);
+  EXPECT_EQ(info.family, 0x16);
+  EXPECT_EQ(info.model, 0x26);
+  EXPECT_STREQ(info.brand_string,
+               "AMD A9-9820 Processor");
+  EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::AMD_JAGUAR);
+}
+
 // http://users.atw.hu/instlatx64/AuthenticAMD/AuthenticAMD0820F01_K17_Dali_CPUID.txt
 TEST_F(CpuidX86Test, AMD_K17_ZEN_DALI) {
   cpu().SetLeaves({
@@ -755,7 +808,7 @@ TEST_F(CpuidX86Test, AMD_K18_ZEN_DHYANA_CACHE_INFO) {
 
   EXPECT_EQ(info.size, 4);
   EXPECT_EQ(info.levels[0].level, 1);
-  EXPECT_EQ(info.levels[0].cache_type, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
   EXPECT_EQ(info.levels[0].cache_size, 32 * KiB);
   EXPECT_EQ(info.levels[0].ways, 8);
   EXPECT_EQ(info.levels[0].line_size, 64);
@@ -763,7 +816,8 @@ TEST_F(CpuidX86Test, AMD_K18_ZEN_DHYANA_CACHE_INFO) {
   EXPECT_EQ(info.levels[0].partitioning, 1);
 
   EXPECT_EQ(info.levels[1].level, 1);
-  EXPECT_EQ(info.levels[1].cache_type, 2);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
   EXPECT_EQ(info.levels[1].cache_size, 64 * KiB);
   EXPECT_EQ(info.levels[1].ways, 4);
   EXPECT_EQ(info.levels[1].line_size, 64);
@@ -771,7 +825,7 @@ TEST_F(CpuidX86Test, AMD_K18_ZEN_DHYANA_CACHE_INFO) {
   EXPECT_EQ(info.levels[1].partitioning, 1);
 
   EXPECT_EQ(info.levels[2].level, 2);
-  EXPECT_EQ(info.levels[2].cache_type, 3);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[2].cache_size, 512 * KiB);
   EXPECT_EQ(info.levels[2].ways, 8);
   EXPECT_EQ(info.levels[2].line_size, 64);
@@ -779,7 +833,7 @@ TEST_F(CpuidX86Test, AMD_K18_ZEN_DHYANA_CACHE_INFO) {
   EXPECT_EQ(info.levels[2].partitioning, 1);
 
   EXPECT_EQ(info.levels[3].level, 3);
-  EXPECT_EQ(info.levels[3].cache_type, 3);
+  EXPECT_EQ(info.levels[3].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
   EXPECT_EQ(info.levels[3].cache_size, 8 * MiB);
   EXPECT_EQ(info.levels[3].ways, 16);
   EXPECT_EQ(info.levels[3].line_size, 64);
@@ -830,6 +884,27 @@ TEST_F(CpuidX86Test, AMD_K19_ZEN3) {
   EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::AMD_ZEN3);
 }
 
+// http://users.atw.hu/instlatx64/AuthenticAMD/AuthenticAMD0A60F12_K19_Raphael_01_CPUID.txt
+TEST_F(CpuidX86Test, AMD_K19_ZEN4_RAPHAEL) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x00000010, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x00000001, 0}, Leaf{0x00A60F12, 0x000C0800, 0x7EF8320B, 0x178BFBFF}},
+      {{0x80000000, 0}, Leaf{0x80000028, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000001, 0}, Leaf{0x00A60F12, 0x00000000, 0x75C237FF, 0x2FD3FBFF}},
+      {{0x80000002, 0}, Leaf{0x20444D41, 0x657A7952, 0x2035206E, 0x30303637}},
+      {{0x80000003, 0}, Leaf{0x2D362058, 0x65726F43, 0x6F725020, 0x73736563}},
+      {{0x80000004, 0}, Leaf{0x2020726F, 0x20202020, 0x20202020, 0x00202020}},
+  });
+  const auto info = GetX86Info();
+
+  EXPECT_STREQ(info.vendor, CPU_FEATURES_VENDOR_AUTHENTIC_AMD);
+  EXPECT_EQ(info.family, 0x19);
+  EXPECT_EQ(info.model, 0x61);
+  EXPECT_STREQ(info.brand_string,
+               "AMD Ryzen 5 7600X 6-Core Processor             ");
+  EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::AMD_ZEN4);
+}
+
 // http://users.atw.hu/instlatx64/HygonGenuine/HygonGenuine0900F11_Hygon_01_CPUID.txt
 TEST_F(CpuidX86Test, AMD_K18_ZEN_DHYANA_OCTAL_CORE_C86_3250) {
   cpu().SetLeaves({
@@ -867,6 +942,114 @@ TEST_F(CpuidX86Test, INTEL_ALDER_LAKE_AVX_VNNI) {
   EXPECT_EQ(info.model, 0x9A);
   EXPECT_TRUE(info.features.avx_vnni);
   EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::INTEL_ADL);
+}
+
+// http://users.atw.hu/instlatx64/AuthenticAMD/AuthenticAMD0100FA0_K10_Thuban_CPUID.txt
+TEST_F(CpuidX86Test, AMD_THUBAN_CACHE_INFO) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x00000006, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000000, 0}, Leaf{0x8000001B, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000001, 0}, Leaf{0x00100FA0, 0x10000050, 0x000037FF, 0xEFD3FBFF}},
+      {{0x80000005, 0}, Leaf{0xFF30FF10, 0xFF30FF20, 0x40020140, 0x40020140}},
+      {{0x80000006, 0}, Leaf{0x20800000, 0x42004200, 0x02008140, 0x0030B140}},
+  });
+  const auto info = GetX86CacheInfo();
+
+  EXPECT_EQ(info.size, 4);
+  EXPECT_EQ(info.levels[0].level, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
+  EXPECT_EQ(info.levels[0].cache_size, 64 * KiB);
+  EXPECT_EQ(info.levels[0].ways, 2);
+  EXPECT_EQ(info.levels[0].line_size, 64);
+
+  EXPECT_EQ(info.levels[1].level, 1);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
+  EXPECT_EQ(info.levels[1].cache_size, 64 * KiB);
+  EXPECT_EQ(info.levels[1].ways, 2);
+  EXPECT_EQ(info.levels[1].line_size, 64);
+
+  EXPECT_EQ(info.levels[2].level, 2);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
+  EXPECT_EQ(info.levels[2].cache_size, 512 * KiB);
+  EXPECT_EQ(info.levels[2].ways, 16);
+  EXPECT_EQ(info.levels[2].line_size, 64);
+
+  EXPECT_EQ(info.levels[3].level, 3);
+  EXPECT_EQ(info.levels[3].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
+  EXPECT_EQ(info.levels[3].cache_size, 6 * MiB);
+  EXPECT_EQ(info.levels[3].ways, 48);
+  EXPECT_EQ(info.levels[3].line_size, 64);
+}
+
+// http://users.atw.hu/instlatx64/AuthenticAMD/AuthenticAMD0020FB1_K8_Manchester_CPUID.txt
+TEST_F(CpuidX86Test, AMD_MANCHESTER_CACHE_INFO) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x00000001, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000000, 0}, Leaf{0x80000018, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000001, 0}, Leaf{0x00020FB1, 0x00000150, 0x00000003, 0xE3D3FBFF}},
+      {{0x80000005, 0}, Leaf{0xFF08FF08, 0xFF20FF20, 0x40020140, 0x40020140}},
+      {{0x80000006, 0}, Leaf{0x00000000, 0x42004200, 0x02008140, 0x00000000}},
+  });
+  const auto info = GetX86CacheInfo();
+
+  EXPECT_EQ(info.size, 3);
+  EXPECT_EQ(info.levels[0].level, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
+  EXPECT_EQ(info.levels[0].cache_size, 64 * KiB);
+  EXPECT_EQ(info.levels[0].ways, 2);
+  EXPECT_EQ(info.levels[0].line_size, 64);
+
+  EXPECT_EQ(info.levels[1].level, 1);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
+  EXPECT_EQ(info.levels[1].cache_size, 64 * KiB);
+  EXPECT_EQ(info.levels[1].ways, 2);
+  EXPECT_EQ(info.levels[1].line_size, 64);
+
+  EXPECT_EQ(info.levels[2].level, 2);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
+  EXPECT_EQ(info.levels[2].cache_size, 512 * KiB);
+  EXPECT_EQ(info.levels[2].ways, 16);
+  EXPECT_EQ(info.levels[2].line_size, 64);
+}
+
+// http://users.atw.hu/instlatx64/AuthenticAMD/AuthenticAMD0100F22_K10_Agena_CPUID.txt
+TEST_F(CpuidX86Test, AMD_AGENA_CACHE_INFO) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x00000005, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000000, 0}, Leaf{0x8000001A, 0x68747541, 0x444D4163, 0x69746E65}},
+      {{0x80000001, 0}, Leaf{0x00100F22, 0x10000000, 0x000007FF, 0xEFD3FBFF}},
+      {{0x80000005, 0}, Leaf{0xFF30FF10, 0xFF30FF20, 0x40020140, 0x40020140}},
+      {{0x80000006, 0}, Leaf{0x20800000, 0x42004200, 0x02008140, 0x0010A140}},
+  });
+  const auto info = GetX86CacheInfo();
+
+  EXPECT_EQ(info.size, 4);
+  EXPECT_EQ(info.levels[0].level, 1);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
+  EXPECT_EQ(info.levels[0].cache_size, 64 * KiB);
+  EXPECT_EQ(info.levels[0].ways, 2);
+  EXPECT_EQ(info.levels[0].line_size, 64);
+
+  EXPECT_EQ(info.levels[1].level, 1);
+  EXPECT_EQ(info.levels[1].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
+  EXPECT_EQ(info.levels[1].cache_size, 64 * KiB);
+  EXPECT_EQ(info.levels[1].ways, 2);
+  EXPECT_EQ(info.levels[1].line_size, 64);
+
+  EXPECT_EQ(info.levels[2].level, 2);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
+  EXPECT_EQ(info.levels[2].cache_size, 512 * KiB);
+  EXPECT_EQ(info.levels[2].ways, 16);
+  EXPECT_EQ(info.levels[2].line_size, 64);
+
+  EXPECT_EQ(info.levels[3].level, 3);
+  EXPECT_EQ(info.levels[3].cache_type, CacheType::CPU_FEATURE_CACHE_UNIFIED);
+  EXPECT_EQ(info.levels[3].cache_size, 2 * MiB);
+  EXPECT_EQ(info.levels[3].ways, 32);
+  EXPECT_EQ(info.levels[3].line_size, 64);
 }
 
 // https://github.com/InstLatx64/InstLatx64/blob/master/GenuineIntel/GenuineIntel00106A1_Nehalem_CPUID.txt
@@ -1039,7 +1222,7 @@ TEST_F(CpuidX86Test, P4_CacheInfo) {
   EXPECT_EQ(info.size, 5);
 
   EXPECT_EQ(info.levels[0].level, UNDEF);
-  EXPECT_EQ(info.levels[0].cache_type, CPU_FEATURE_CACHE_TLB);
+  EXPECT_EQ(info.levels[0].cache_type, CacheType::CPU_FEATURE_CACHE_TLB);
   EXPECT_EQ(info.levels[0].cache_size, 4 * KiB);
   EXPECT_EQ(info.levels[0].ways, UNDEF);
   EXPECT_EQ(info.levels[0].line_size, UNDEF);
@@ -1047,7 +1230,7 @@ TEST_F(CpuidX86Test, P4_CacheInfo) {
   EXPECT_EQ(info.levels[0].partitioning, 0);
 
   EXPECT_EQ(info.levels[1].level, UNDEF);
-  EXPECT_EQ(info.levels[1].cache_type, CPU_FEATURE_CACHE_TLB);
+  EXPECT_EQ(info.levels[1].cache_type, CacheType::CPU_FEATURE_CACHE_TLB);
   EXPECT_EQ(info.levels[1].cache_size, 4 * KiB);
   EXPECT_EQ(info.levels[1].ways, UNDEF);
   EXPECT_EQ(info.levels[1].line_size, UNDEF);
@@ -1055,7 +1238,7 @@ TEST_F(CpuidX86Test, P4_CacheInfo) {
   EXPECT_EQ(info.levels[1].partitioning, 0);
 
   EXPECT_EQ(info.levels[2].level, 1);
-  EXPECT_EQ(info.levels[2].cache_type, CPU_FEATURE_CACHE_DATA);
+  EXPECT_EQ(info.levels[2].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
   EXPECT_EQ(info.levels[2].cache_size, 8 * KiB);
   EXPECT_EQ(info.levels[2].ways, 4);
   EXPECT_EQ(info.levels[2].line_size, 64);
@@ -1063,7 +1246,8 @@ TEST_F(CpuidX86Test, P4_CacheInfo) {
   EXPECT_EQ(info.levels[2].partitioning, 0);
 
   EXPECT_EQ(info.levels[3].level, 1);
-  EXPECT_EQ(info.levels[3].cache_type, CPU_FEATURE_CACHE_INSTRUCTION);
+  EXPECT_EQ(info.levels[3].cache_type,
+            CacheType::CPU_FEATURE_CACHE_INSTRUCTION);
   EXPECT_EQ(info.levels[3].cache_size, 12 * KiB);
   EXPECT_EQ(info.levels[3].ways, 8);
   EXPECT_EQ(info.levels[3].line_size, UNDEF);
@@ -1071,7 +1255,7 @@ TEST_F(CpuidX86Test, P4_CacheInfo) {
   EXPECT_EQ(info.levels[3].partitioning, 0);
 
   EXPECT_EQ(info.levels[4].level, 2);
-  EXPECT_EQ(info.levels[4].cache_type, CPU_FEATURE_CACHE_DATA);
+  EXPECT_EQ(info.levels[4].cache_type, CacheType::CPU_FEATURE_CACHE_DATA);
   EXPECT_EQ(info.levels[4].cache_size, 256 * KiB);
   EXPECT_EQ(info.levels[4].ways, 8);
   EXPECT_EQ(info.levels[4].line_size, 64);
@@ -1167,6 +1351,20 @@ TEST_F(CpuidX86Test, INTEL_LAKEMONT) {
   EXPECT_EQ(info.model, 0x09);
   EXPECT_EQ(GetX86Microarchitecture(&info),
             X86Microarchitecture::INTEL_LAKEMONT);
+}
+
+// https://github.com/InstLatx64/InstLatx64/blob/master/GenuineIntel/GenuineIntel00006E8_PM_Yonah_CPUID.txt
+TEST_F(CpuidX86Test, INTEL_CORE_YONAH) {
+  cpu().SetLeaves({
+      {{0x00000000, 0}, Leaf{0x0000000A, 0x756E6547, 0x6C65746E, 0x49656E69}},
+      {{0x00000001, 0}, Leaf{0x000006E8, 0x00010800, 0x0000C109, 0xAFE9FBFF}},
+  });
+  const auto info = GetX86Info();
+
+  EXPECT_STREQ(info.vendor, CPU_FEATURES_VENDOR_GENUINE_INTEL);
+  EXPECT_EQ(info.family, 0x06);
+  EXPECT_EQ(info.model, 0x0E);
+  EXPECT_EQ(GetX86Microarchitecture(&info), X86Microarchitecture::INTEL_CORE);
 }
 
 // https://github.com/InstLatx64/InstLatx64/blob/master/GenuineIntel/GenuineIntel00706A8_GoldmontPlus_CPUID.txt
