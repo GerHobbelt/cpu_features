@@ -6,9 +6,17 @@ if(POLICY CMP0077)
   cmake_policy(SET CMP0077 NEW)
 endif()
 
-project(CpuFeatures VERSION 0.7.0 LANGUAGES C)
+project(CpuFeatures VERSION 0.8.0 LANGUAGES C)
 
 set(CMAKE_C_STANDARD 99)
+
+# when cpu_features is included as subproject (i.e. using add_subdirectory(cpu_features))
+# in the source tree of a project that uses it, test rules are disabled.
+if(NOT CMAKE_SOURCE_DIR STREQUAL PROJECT_SOURCE_DIR)
+  option(BUILD_TESTING "Enable test rule" OFF)
+else()
+  option(BUILD_TESTING "Enable test rule" ON)
+endif()
 
 # Default Build Type to be Release
 if(NOT CMAKE_BUILD_TYPE)
@@ -79,6 +87,7 @@ macro(add_cpu_features_headers_and_sources HDRS_LIST_NAME SRCS_LIST_NAME)
       list(APPEND ${HDRS_LIST_NAME} ${PROJECT_SOURCE_DIR}/include/cpuinfo_arm.h)
   elseif(PROCESSOR_IS_AARCH64)
       list(APPEND ${HDRS_LIST_NAME} ${PROJECT_SOURCE_DIR}/include/cpuinfo_aarch64.h)
+      list(APPEND ${SRCS_LIST_NAME} ${PROJECT_SOURCE_DIR}/include/internal/windows_utils.h)
   elseif(PROCESSOR_IS_X86)
       list(APPEND ${HDRS_LIST_NAME} ${PROJECT_SOURCE_DIR}/include/cpuinfo_x86.h)
       list(APPEND ${SRCS_LIST_NAME} ${PROJECT_SOURCE_DIR}/include/internal/cpuid_x86.h)
