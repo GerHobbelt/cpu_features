@@ -1,4 +1,4 @@
-name: amd64 Linux Bazel
+name: AArch64 Linux Bazel
 
 on:
   push:
@@ -16,8 +16,8 @@ jobs:
         uses: actions/checkout@v2
       - name: Install Bazel through bazelisk
         run: |
-          wget  https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-amd64
-          chmod +x bazelisk-linux-amd64
-          ./bazelisk-linux-amd64 --version
+          wget  https://github.com/bazelbuild/bazelisk/releases/download/v1.18.0/bazelisk-linux-arm64
+          chmod +x bazelisk-linux-arm64
+          ./bazelisk-linux-arm64 --version
       - name: Test
-        run: ./bazelisk-linux-amd64 test -s --verbose_failures //...
+        run: ./bazelisk-linux-arm64 test -s --verbose_failures //...
