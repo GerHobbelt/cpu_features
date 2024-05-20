@@ -1,15 +1,19 @@
-// usage:
-// 1. copy paste the whole code to https://run.dlang.io/ then click `run`
-// 2. `docker run --rm -it -v $(pwd):/src dlanguage/dmd dmd -run generate_badges.d`
+#!/usr/bin/env -S docker run --rm -v ${PWD}/scripts:/scripts -v ${PWD}/.github/workflows:/.github/workflows dlanguage/dmd dmd -run /scripts/generate_badges.d
+
+// To run this script:
+// cd /path/to/cpu_features
+// ./scripts/generate_badges.d
+
 import std.algorithm : each, map, cartesianProduct, filter, joiner, sort, uniq;
 import std.array;
+import std.base64 : Base64;
 import std.conv : to;
+import std.file : exists;
 import std.format;
 import std.range : chain, only;
 import std.stdio;
-import std.traits : EnumMembers;
 import std.string : representation;
-import std.base64 : Base64;
+import std.traits : EnumMembers;
 
 immutable string bazel_svg = `<svg role="img" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path d="M6 .16l5.786 5.786L6 11.732.214 5.946 6 .161zM0 6.214V12l5.786 5.786V12L0 6.214zM18 .16l5.786 5.786L18 11.732l-5.786-5.786L18 .161zM24 6.214V12l-5.786 5.786V12L24 6.214zM12 6.16l5.786 5.786L12 17.732l-5.786-5.786L12 6.161zM11.84 18.054v5.785l-5.786-5.785v-5.786l5.785 5.786zM12.16 18.054l5.786-5.786v5.786l-5.785 5.785v-5.785z" stroke="transparent" fill="white"/></svg>`;
 const string bazel_svg_base64 = Base64.encode(representation(bazel_svg));
@@ -48,15 +52,11 @@ const:
     Os os;
     BuildSystem build_system;
 
+private:
     string id()
     {
         return format("%d%c%d", cast(uint)(os) + 1, cast(char)('a' + cpu),
             cast(uint)(build_system));
-    }
-
-    string disabled_image_ref()
-    {
-        return format("[d%d]", cast(uint)(build_system));
     }
 
     string link_ref()
@@ -69,24 +69,16 @@ const:
         return format("[i%s]", id());
     }
 
-    bool enabled()
+    string filename()
     {
-        if (cpu == Cpu.LOONGARCH)
-            return false;
-        final switch (build_system)
-        {
-        case BuildSystem.CMake:
-            return os == Os.Linux || cpu == Cpu.amd64;
-        case BuildSystem.Bazel:
-            return os == Os.Linux && (cpu == Cpu.amd64 || cpu == Cpu.AArch64);
-        }
+        import std.uni : toLower;
+
+        return toLower(format("%s_%s_%s.yml", cpu, os, build_system));
     }
 
-    string text()
+    bool enabled()
     {
-        if (enabled())
-            return format("[![]%s]%s", image_ref, link_ref);
-        return format("![]%s", disabled_image_ref);
+        return exists("../.github/workflows/" ~ filename());
     }
 
     string append_logo(string url)
@@ -100,17 +92,24 @@ const:
         }
     }
 
+public:
+
+    string disabled_image_ref()
+    {
+        return format("[d%d]", cast(uint)(build_system));
+    }
+
+    string text()
+    {
+        if (enabled())
+            return format("[![%s]%s]%s", build_system, image_ref, link_ref);
+        return format("![%s]%s", build_system, disabled_image_ref);
+    }
+
     string disabled_image_link()
     {
         return append_logo(format("%s: https://img.shields.io/badge/n%%2Fa-lightgrey?",
                 disabled_image_ref));
-    }
-
-    string filename()
-    {
-        import std.uni : toLower;
-
-        return toLower(format("%s_%s_%s.yml", cpu, os, build_system));
     }
 
     string link_decl()
