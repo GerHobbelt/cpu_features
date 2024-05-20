@@ -1,4 +1,4 @@
-name: AArch64 Linux CMake
+name: s390x Linux CMake
 
 on:
   push:
@@ -14,10 +14,7 @@ jobs:
     strategy:
       matrix:
         targets: [
-          [aarch64],
-          [aarch64be],
-          [aarch64-linux-gnu],
-          [aarch64_be-linux-gnu]
+          [s390x],
         ]
       fail-fast: false
     env:

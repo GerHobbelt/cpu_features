@@ -310,8 +310,15 @@ static void ParseCpuId(const Leaves* leaves, X86Info* info,
   features->clflushopt = IsBitSet(leaf_7.ebx, 23);
   features->clwb = IsBitSet(leaf_7.ebx, 24);
   features->sha = IsBitSet(leaf_7.ebx, 29);
+  features->gfni = IsBitSet(leaf_7.ecx, 8);
   features->vaes = IsBitSet(leaf_7.ecx, 9);
   features->vpclmulqdq = IsBitSet(leaf_7.ecx, 10);
+  features->movdiri = IsBitSet(leaf_7.ecx, 27);
+  features->movdir64b = IsBitSet(leaf_7.ecx, 28);
+  features->fs_rep_mov = IsBitSet(leaf_7.edx, 4);
+  features->fz_rep_movsb = IsBitSet(leaf_7_1.eax, 10);
+  features->fs_rep_stosb = IsBitSet(leaf_7_1.eax, 11);
+  features->fs_rep_cmpsb_scasb = IsBitSet(leaf_7_1.eax, 12);
   features->adx = IsBitSet(leaf_7.ebx, 19);
   features->lzcnt = IsBitSet(leaf_80000001.ecx, 5);
 
@@ -365,6 +372,7 @@ static void ParseCpuId(const Leaves* leaves, X86Info* info,
       features->avx512_4fmaps = IsBitSet(leaf_7.edx, 3);
       features->avx512_bf16 = IsBitSet(leaf_7_1.eax, 5);
       features->avx512_vp2intersect = IsBitSet(leaf_7.edx, 8);
+      features->avx512_fp16 = IsBitSet(leaf_7.edx, 23);
     }
     if (os_preserves->amx_registers) {
       features->amx_bf16 = IsBitSet(leaf_7.edx, 22);
@@ -1879,6 +1887,7 @@ CacheInfo GetX86CacheInfo(void) {
   LINE(X86_AVX512_4FMAPS, avx512_4fmaps, , , )             \
   LINE(X86_AVX512_BF16, avx512_bf16, , , )                 \
   LINE(X86_AVX512_VP2INTERSECT, avx512_vp2intersect, , , ) \
+  LINE(X86_AVX512_FP16, avx512_fp16, , , )                 \
   LINE(X86_AMX_BF16, amx_bf16, , , )                       \
   LINE(X86_AMX_TILE, amx_tile, , , )                       \
   LINE(X86_AMX_INT8, amx_int8, , , )                       \
@@ -1893,7 +1902,14 @@ CacheInfo GetX86CacheInfo(void) {
   LINE(X86_DCA, dca, , , )                                 \
   LINE(X86_SS, ss, , , )                                   \
   LINE(X86_ADX, adx, , , )                                 \
-  LINE(X86_LZCNT, lzcnt, , , )
+  LINE(X86_LZCNT, lzcnt, , , )                             \
+  LINE(X86_GFNI, gfni, , , )                               \
+  LINE(X86_MOVDIRI, movdiri, , , )                         \
+  LINE(X86_MOVDIR64B, movdir64b, , , )                     \
+  LINE(X86_FS_REP_MOV, fs_rep_mov, , , )                   \
+  LINE(X86_FZ_REP_MOVSB, fz_rep_movsb, , , )               \
+  LINE(X86_FS_REP_STOSB, fs_rep_stosb, , , )               \
+  LINE(X86_FS_REP_CMPSB_SCASB, fs_rep_cmpsb_scasb, , , )
 #define INTROSPECTION_PREFIX X86
 #define INTROSPECTION_ENUM_PREFIX X86
 #include "define_introspection.inl"
